@@ -14,7 +14,9 @@ const atConfig = {
 		installedMods: ['spireTD', 'heirloomCalc', 'farmCalc', 'mutatorPreset', 'perky', 'surky', 'percentHealth'],
 		installedModules: ['import-export', 'utils', 'query', 'modifyGameFunctions', 'mapFunctions', 'calc', 'portal', 'upgrades', 'heirlooms', 'buildings', 'jobs', 'equipment', 'gather', 'stance', 'maps', 'breedtimer', 'combat', 'magmite', 'nature', 'other', 'fight-info', 'performance', 'bones', 'mapSettingsUI', 'gameSettingsUI', 'spireAssault'],
 		installedTesting: ['testChallenges', 'testProfile', 'testSave'],
-		installedExternal: ['https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', 'https://Quiaaaa.github.io/AutoTrimps/Graphs.js', 'https://stellar-demesne.github.io/Trimps-VoidMapClarifier/VoidMapClarifier.js'],
+		/* Vendored locally so every load comes from this fork's single origin — a hung
+		   third-party CDN used to freeze the game mid-load (gameLoop stays no-op). */
+		installedExternal: ['vendor/jquery.min.js', 'vendor/select2.min.js', 'vendor/Graphs.js', 'vendor/VoidMapClarifier.js'],
 		loadedExternal: [],
 		loadedModules: [],
 		loadedMods: [],
@@ -200,14 +202,15 @@ function loadScriptsAT() {
 			const timeStamp = localVersion ? '' : `?${Math.floor(Date.now() / 60000) * 60000}`;
 
 			const modules = ['versionNumber', ...installedMods, ...installedModules, ...testing, 'SettingsGUI'];
-			const select2css = localVersion && !steamClient ? `${atConfig.initialise.basepath}testing/select2.min.css` : 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css';
+			const select2css = localVersion && !steamClient ? `${atConfig.initialise.basepath}testing/select2.min.css` : `${atConfig.initialise.basepath}vendor/select2.min.css`;
 			const stylesheets = [`${select2css}`, `${atConfig.initialise.basepath}css/select2.css`, `${atConfig.initialise.basepath}css/tabs.css`, `${atConfig.initialise.basepath}css/farmCalc.css`, `${atConfig.initialise.basepath}css/perky.css`, `${atConfig.initialise.basepath}css/mutatorPreset.css`, `${atConfig.initialise.basepath}css/heirloomCalc.css`];
 
 			await loadModules('gameUpdates', atConfig.modules.pathMods, undefined, timeStamp);
 
 			for (const script of installedExternal) {
-				if (atConfig.modules.loadedExternal.includes(script)) continue;
-				await loadScript(script, undefined, undefined, timeStamp);
+				const url = script.indexOf('http') === 0 ? script : atConfig.initialise.basepath + script;
+				if (atConfig.modules.loadedExternal.includes(url)) continue;
+				await loadScript(url, undefined, undefined, timeStamp);
 			}
 
 			await loadModules('utils', atConfig.modules.path, undefined, timeStamp);
