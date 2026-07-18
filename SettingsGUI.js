@@ -6107,15 +6107,19 @@ function _atKeyClick(event) {
 
 function _atAccessify(elem, opts = {}) {
 	if (!elem) return;
+	// Listeners attach once per element (popup passes can revisit nodes); label and state
+	// refresh on every call.
+	const firstVisit = !(elem.dataset && elem.dataset.atA11y);
+	if (elem.dataset) elem.dataset.atA11y = '1';
 	const nativelyFocusable = ['SELECT', 'BUTTON', 'INPUT', 'TEXTAREA'].includes(elem.tagName) || (elem.tagName === 'A' && elem.hasAttribute('href'));
-	if (!nativelyFocusable) {
+	if (!nativelyFocusable && firstVisit) {
 		if (!elem.getAttribute('role')) elem.setAttribute('role', 'button');
 		if (!elem.hasAttribute('tabindex')) elem.setAttribute('tabindex', '0');
 		elem.addEventListener('keydown', _atKeyClick);
 	}
 	if (opts.label) elem.setAttribute('aria-label', opts.label);
 	if (typeof opts.pressed === 'boolean') elem.setAttribute('aria-pressed', String(opts.pressed));
-	if (opts.describe && typeof usingScreenReader !== 'undefined' && usingScreenReader && typeof keyTooltip === 'function') {
+	if (opts.describe && firstVisit && typeof usingScreenReader !== 'undefined' && usingScreenReader && typeof keyTooltip === 'function') {
 		elem.addEventListener('keydown', function (event) {
 			if (event.key === '?') keyTooltip(event, ...opts.describe());
 		});
@@ -6128,20 +6132,44 @@ function _atAnnounce(text) {
 	}
 }
 
-/* AT popup bodies use <div class='btn' onclick> action rows and bare textareas/inputs.
-Called after a popup's content lands in the tooltip: makes the action divs keyboard
-buttons (skipping ones wrapped in a real link) and names unlabelled text fields. */
+/* AT popup bodies use <div class='btn' onclick> action rows, <div class='btnItem' onclick>
+toggle tiles (Auto Structure/Jobs/Equip, Hide Automation — colour-only Equipped state), and
+bare inputs/textareas/selects. Called after a popup's content lands in the tooltip: makes
+the divs keyboard buttons (skipping ones wrapped in a real link), exposes toggle state, and
+names bare fields from their row context. */
 function _atAccessifyTooltip(tooltipDiv) {
 	if (!tooltipDiv) tooltipDiv = document.getElementById('tooltipDiv');
 	if (!tooltipDiv) return;
 	tooltipDiv.querySelectorAll('div.btn, span.btn').forEach((el) => {
 		if (!el.closest('a')) _atAccessify(el);
 	});
+	tooltipDiv.querySelectorAll('.btnItem[onclick]').forEach((el) => {
+		_atAccessify(el, { pressed: el.classList.contains('btnItemEquipped') });
+	});
 	const title = document.getElementById('tipTitle');
 	const titleText = title && title.textContent ? title.textContent + ' ' : '';
-	tooltipDiv.querySelectorAll("textarea:not([aria-label]), input:not([aria-label]):not([type='checkbox'])").forEach((el) => {
-		el.setAttribute('aria-label', titleText + 'input');
+	tooltipDiv.querySelectorAll("input:not([aria-label]):not([type='checkbox']), textarea:not([aria-label]), select:not([aria-label])").forEach((el) => {
+		el.setAttribute('aria-label', _atFieldLabel(el) || titleText + 'input');
 	});
+}
+
+/* Best-effort name for a bare popup field: the owning toggle tile's name plus the field's
+own leading caption — "House Percent" for the Percent input in House's row. The popup
+tables put each field inside a caption span, two toggle tiles per flex row. */
+function _atFieldLabel(el) {
+	let leading = '';
+	const wrap = el.parentNode;
+	if (wrap && wrap.childNodes[0] && wrap.childNodes[0].nodeType === 3) leading = wrap.childNodes[0].textContent.trim();
+	let owner = '';
+	const row = el.closest ? el.closest("div[id^='row']") : null;
+	if (row) {
+		for (const child of row.children) {
+			if (child.classList && child.classList.contains('btnItem')) owner = child.textContent.trim();
+			if (child.contains(el)) break;
+		}
+	}
+	if (!owner && !leading) return el.id || null;
+	return `${owner} ${leading}`.replace(/:$/, '').trim();
 }
 
 function _createButton(id, label, setting, tooltipText, timeWarp = '') {

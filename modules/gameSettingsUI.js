@@ -1343,6 +1343,10 @@ function _hideAutomationToggleElem(element) {
 
 	element.classList.toggle(`${elemPrefix}Equipped`);
 	element.classList.toggle(`${elemPrefix}NotEquipped`);
+
+	const enabled = element.classList.contains(`${elemPrefix}Equipped`);
+	element.setAttribute('aria-pressed', String(enabled));
+	if (typeof _atAnnounce === 'function') _atAnnounce(`${element.textContent.trim()} ${enabled ? 'enabled' : 'disabled'}`);
 }
 
 function _hideAutomationHover(what, event, hide = false) {
