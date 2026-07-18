@@ -6482,7 +6482,15 @@ function _createMessagesButton() {
 	);
 
 	atBtnContainer.appendChild(atBtnText);
-	document.getElementById('logBtnGroup').appendChild(atBtnContainer);
+	// Slot in with the game's filter buttons (Story/Loot/Unlocks/Combat),
+	// before the config cog, so the row reads as one run of filters.
+	const logBtnGroup = document.getElementById('logBtnGroup');
+	const cogHolder = document.getElementById('logConfigHolder');
+	if (cogHolder && cogHolder.parentNode === logBtnGroup) {
+		logBtnGroup.insertBefore(atBtnContainer, cogHolder);
+	} else {
+		logBtnGroup.appendChild(atBtnContainer);
+	}
 
 	// The game already ships a "Configure Displayed Messages" cog with
 	// id 'logConfigBtn'; injecting a second cog under the same id left
