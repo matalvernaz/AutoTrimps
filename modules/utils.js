@@ -198,10 +198,10 @@ function filterMessage_AT() {
 	messageSetting.show = isDisplayed;
 	saveSettings();
 	filterElement.className = getTabClass(isDisplayed);
-	filterElement.setAttribute('aria-pressed', String(isDisplayed));
-	if (typeof _atAnnounce === 'function') {
-		_atAnnounce(`AutoTrimps messages ${isDisplayed ? 'shown' : 'hidden'}`);
-	}
+	// State lives in the button's name, same as the game's log filters
+	// ("Combat" / "Combat off") — a screen reader re-reads the focused
+	// button's new name on activation, which is the whole announcement.
+	filterElement.innerHTML = isDisplayed ? 'AT Messages' : 'AT Messages off';
 
 	Array.from(messageElements).forEach((messageElement) => {
 		messageElement.style.display = displayStyle;

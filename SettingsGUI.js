@@ -6475,10 +6475,10 @@ function _createMessagesButton() {
 			id: 'AutoTrimpsFilter',
 			type: 'button',
 			onClick: 'filterMessage_AT()',
-			'aria-pressed': String(msgsShown),
 			class: `btn ${btnDisplay} logFlt`
 		},
-		['AT Messages']
+		// State in the name, matching the game's filters ("Combat off").
+		[msgsShown ? 'AT Messages' : 'AT Messages off']
 	);
 
 	atBtnContainer.appendChild(atBtnText);

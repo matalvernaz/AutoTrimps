@@ -1043,6 +1043,12 @@ function _atMessageMasterToggle() {
 		master.classList.toggle('btnItemNotEquipped', !shown);
 		master.setAttribute('aria-pressed', String(shown));
 	}
+	// The log-row button announces by renaming itself, but it isn't
+	// focused when toggled from here — speak the result like the
+	// popup's other tiles do.
+	if (typeof _atAnnounce === 'function') {
+		_atAnnounce(`Show AutoTrimps messages in log ${shown ? 'enabled' : 'disabled'}`);
+	}
 }
 
 /* daily portal mods */
