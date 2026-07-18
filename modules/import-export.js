@@ -96,6 +96,7 @@ function importExportTooltip(event, titleText, extraParam, extraParam2) {
 		if (tipCost.innerHTML !== costText) tipCost.innerHTML = costText;
 		tooltipDiv.style.display = 'block';
 		if (typeof ondisplay === 'function') ondisplay();
+		if (typeof _atAccessifyTooltip === 'function') _atAccessifyTooltip(tooltipDiv);
 	}
 
 	if (titleText === 'downloadSave') _downloadSave(event);

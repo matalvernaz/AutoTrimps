@@ -60,6 +60,7 @@ function initialiseAllTabs() {
 	document.getElementById('autoSettings').appendChild(addTabsDiv);
 	document.getElementById('Core').style.display = 'block';
 	document.getElementsByClassName('tablinks')[0].className += ' active';
+	document.getElementsByClassName('tablinks')[0].setAttribute('aria-expanded', 'true');
 }
 
 function _createTab(tabName, tabDescription, addTabsDiv, addtabsUL) {
@@ -68,6 +69,8 @@ function _createTab(tabName, tabDescription, addTabsDiv, addtabsUL) {
 	tabLink.className = 'tablinks noselect pointerCursor';
 	tabLink.setAttribute('onclick', `_toggleTab(event, '${tabName}')`);
 	tabLink.appendChild(document.createTextNode(tabName));
+	tabLink.setAttribute('aria-expanded', 'false');
+	_atAccessify(tabLink, { describe: () => [tabName, 'customText', tabDescription] });
 	tabItem.id = 'tab' + tabName;
 	tabItem.appendChild(tabLink);
 	addtabsUL.appendChild(tabItem);
@@ -89,6 +92,7 @@ function _createControlTab(icon, action, tooltipText, addtabsUL) {
 	controlLink.className = `tablinks ${action} noselect pointerCursor`;
 	controlLink.setAttribute('onclick', `${action}();`);
 	controlLink.appendChild(document.createTextNode(icon));
+	_atAccessify(controlLink, { label: tooltipText === 'Exit' ? 'Exit AutoTrimps settings' : tooltipText });
 	controlItem.appendChild(controlLink);
 	controlItem.style.float = 'right';
 	controlItem.setAttribute('onmouseover', `tooltip("${tooltipText}", "customText", event, "${tooltipText} all of the settings tabs.")`);
@@ -103,9 +107,11 @@ function _toggleTab(event, tabName) {
 	if (target.classList.contains('active')) {
 		tab.style.display = 'none';
 		target.classList.remove('active');
+		target.setAttribute('aria-expanded', 'false');
 	} else {
 		tab.style.display = 'block';
 		target.classList.add('active');
+		target.setAttribute('aria-expanded', 'true');
 	}
 }
 
@@ -119,6 +125,7 @@ function _minimizeAllTabs() {
 
 	for (const link of links) {
 		link.classList.remove('active');
+		if (link.hasAttribute('aria-expanded')) link.setAttribute('aria-expanded', 'false');
 	}
 }
 
@@ -143,6 +150,7 @@ function _maximizeAllTabs() {
 		if (!link.classList.contains('active')) {
 			link.classList.add('active');
 		}
+		if (link.hasAttribute('aria-expanded')) link.setAttribute('aria-expanded', 'true');
 	}
 
 	for (const tab of tabs) {
@@ -5345,6 +5353,20 @@ function createSetting(id, name, description, type, defaultValue, list, universe
 			}
 		});
 	}
+
+	const describeSetting = () => {
+		const title = typeof name === 'function' ? name() : String(name);
+		return [Array.isArray(title) ? title.join(' / ') : title, 'customText', typeof description === 'function' ? description() : ''];
+	};
+	if (type === 'boolean') {
+		const u2Shown = autoTrimpSettings.universeSetting && autoTrimpSettings.universeSetting.value === 1 && universe.indexOf(0) === -1;
+		_atAccessify(btn, { pressed: !!autoTrimpSettings[id][u2Shown ? 'enabledU2' : 'enabled'], describe: describeSetting });
+	} else if (type.includes('dropdown')) {
+		_atAccessify(btn, { label: name(), describe: describeSetting });
+	} else {
+		_atAccessify(btn, { describe: describeSetting });
+	}
+	if (id === 'dailyPortal') _atAccessify(document.getElementById('autoPortalSettingsBtn'), { label: 'Configure Auto Portal settings' });
 }
 
 function createHeading(id, description, container = atConfig.initialise.settingsTab) {
@@ -5410,6 +5432,8 @@ function settingChanged(id, currUniverse) {
 		const enabled = `enabled${valueSuffix}`;
 		btn[enabled] = !btn[enabled];
 		document.getElementById(id).setAttribute('class', '_settingBtn toggleConfigBtn noselect settingsBtn settingBtn' + btn[enabled]);
+		document.getElementById(id).setAttribute('aria-pressed', String(!!btn[enabled]));
+		_atAnnounce(`${btn.name()} ${btn[enabled] ? 'on' : 'off'}`);
 		if (booleanActions[id] && updateUI) booleanActions[id]();
 		if (id === 'heirloomSwapping') updateHeirloomSwapElem();
 		if (id === 'autoMapsReroll') hdStats.autoLevelMaxFragments = btn[enabled] && hdStats.autoLevelInitial ? stats(undefined, false) : undefined;
@@ -5434,6 +5458,7 @@ function settingChanged(id, currUniverse) {
 		if (btn[value] > btn.name().length - 1) btn[value] = 0;
 		element.setAttribute('class', '_settingBtn noselect settingsBtn settingBtn' + btn[value]);
 		element.innerHTML = btn.name()[btn[value]];
+		_atAnnounce(element.textContent);
 		if (multitoggleActions[id] && updateUI) multitoggleActions[id]();
 		if (id === 'dailyPortal') document.getElementById(btn.id).classList.add('toggleConfigBtn');
 
@@ -5552,7 +5577,7 @@ function parseSuffix(num) {
 function autoSetValueToolTip(id, text, multi, negative) {
 	const valueSuffix = autoTrimpSettings.universeSetting.value === 1 && autoTrimpSettings[id].universe.indexOf(0) === -1 ? 'U2' : '';
 	const tooltipDiv = document.getElementById('tooltipDiv');
-	const tooltipText = `Type a number below. You can use shorthand such as 2e5, 1sx, or 200k. ${negative ? 'Accepts negative numbers as validated inputs.' : 'Put -1 for Infinite.'}<br/><br/><input id="customNumberBox" style="width: 100%" onkeypress="onKeyPressSetting(event, '${id}', ${multi}, ${negative})" value="${autoTrimpSettings[id]['value' + valueSuffix]}"></input>`;
+	const tooltipText = `Type a number below. You can use shorthand such as 2e5, 1sx, or 200k. ${negative ? 'Accepts negative numbers as validated inputs.' : 'Put -1 for Infinite.'}<br/><br/><input id="customNumberBox" aria-label="${text} value" style="width: 100%" onkeypress="onKeyPressSetting(event, '${id}', ${multi}, ${negative})" value="${autoTrimpSettings[id]['value' + valueSuffix]}"></input>`;
 	const costText = `<div class="maxCenter"><div class="btn btn-info" onclick="autoSetValue('${id}', ${multi}, ${negative})">Apply</div><div class="btn btn-info" onclick="cancelTooltip()">Cancel</div></div>`;
 	game.global.lockTooltip = true;
 	tooltipDiv.style.left = '32.5%';
@@ -5561,6 +5586,7 @@ function autoSetValueToolTip(id, text, multi, negative) {
 	document.getElementById('tipText').innerHTML = tooltipText;
 	document.getElementById('tipCost').innerHTML = costText;
 	tooltipDiv.style.display = 'block';
+	_atAccessifyTooltip(tooltipDiv);
 	const customNumberBox = document.getElementById('customNumberBox');
 	try {
 		customNumberBox.setSelectionRange(0, box.value.length);
@@ -5611,7 +5637,7 @@ function autoSetTextToolTip(id, text, multiValue) {
 	const valueSuffix = autoTrimpSettings.universeSetting.value === 1 && setting.universe.indexOf(0) === -1 ? 'U2' : '';
 	const tooltipDiv = document.getElementById('tooltipDiv');
 
-	const tooltipText = `Type your input below<br/><br/><input id="customTextBox" style="width: 100%" onkeypress="onKeyPressSetting(event, '${id}', ${multiValue})" value="${setting['value' + valueSuffix]}"></input>`;
+	const tooltipText = `Type your input below<br/><br/><input id="customTextBox" aria-label="${text} value" style="width: 100%" onkeypress="onKeyPressSetting(event, '${id}', ${multiValue})" value="${setting['value' + valueSuffix]}"></input>`;
 	const costText = `<div class="maxCenter"><div class="btn btn-info" onclick="autoSetText('${id}', ${multiValue})">Apply</div><div class="btn btn-info" onclick="cancelTooltip()">Cancel</div></div>`;
 
 	game.global.lockTooltip = true;
@@ -5621,6 +5647,7 @@ function autoSetTextToolTip(id, text, multiValue) {
 	document.getElementById('tipText').innerHTML = tooltipText;
 	document.getElementById('tipCost').innerHTML = costText;
 	tooltipDiv.style.display = 'block';
+	_atAccessifyTooltip(tooltipDiv);
 
 	const textBox = document.getElementById('customTextBox');
 	try {
@@ -5743,6 +5770,7 @@ function _setDisplayedSettings(item) {
 	const handleBooleanType = (item, elem) => {
 		const itemEnabled = item['enabled' + radonSetting];
 		elem.setAttribute('class', `_settingBtn toggleConfigBtnLocal noselect settingsBtn settingBtn${itemEnabled}`);
+		elem.setAttribute('aria-pressed', String(!!itemEnabled));
 		elem.innerHTML = item.name();
 	};
 
@@ -6065,6 +6093,57 @@ function _createElement(type, attributes, children) {
 	return element;
 }
 
+/* Screen-reader access helpers.
+AutoTrimps builds its controls as click-only DIVs and href-less anchors: no keyboard focus,
+no role, and boolean toggles show state by background colour alone. Every control-creation
+path calls _atAccessify so the control is focusable, activatable with Enter/Space, named,
+and exposes state via aria-pressed where it has one. Descriptions reuse the game's ?-key
+tooltip pattern (keyTooltip) when the screen-reader build is active. */
+function _atKeyClick(event) {
+	if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Spacebar') return;
+	event.preventDefault();
+	event.currentTarget.click();
+}
+
+function _atAccessify(elem, opts = {}) {
+	if (!elem) return;
+	const nativelyFocusable = ['SELECT', 'BUTTON', 'INPUT', 'TEXTAREA'].includes(elem.tagName) || (elem.tagName === 'A' && elem.hasAttribute('href'));
+	if (!nativelyFocusable) {
+		if (!elem.getAttribute('role')) elem.setAttribute('role', 'button');
+		if (!elem.hasAttribute('tabindex')) elem.setAttribute('tabindex', '0');
+		elem.addEventListener('keydown', _atKeyClick);
+	}
+	if (opts.label) elem.setAttribute('aria-label', opts.label);
+	if (typeof opts.pressed === 'boolean') elem.setAttribute('aria-pressed', String(opts.pressed));
+	if (opts.describe && typeof usingScreenReader !== 'undefined' && usingScreenReader && typeof keyTooltip === 'function') {
+		elem.addEventListener('keydown', function (event) {
+			if (event.key === '?') keyTooltip(event, ...opts.describe());
+		});
+	}
+}
+
+function _atAnnounce(text) {
+	if (typeof usingScreenReader !== 'undefined' && usingScreenReader && typeof screenReaderAssert === 'function') {
+		screenReaderAssert(String(text).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
+	}
+}
+
+/* AT popup bodies use <div class='btn' onclick> action rows and bare textareas/inputs.
+Called after a popup's content lands in the tooltip: makes the action divs keyboard
+buttons (skipping ones wrapped in a real link) and names unlabelled text fields. */
+function _atAccessifyTooltip(tooltipDiv) {
+	if (!tooltipDiv) tooltipDiv = document.getElementById('tooltipDiv');
+	if (!tooltipDiv) return;
+	tooltipDiv.querySelectorAll('div.btn, span.btn').forEach((el) => {
+		if (!el.closest('a')) _atAccessify(el);
+	});
+	const title = document.getElementById('tipTitle');
+	const titleText = title && title.textContent ? title.textContent + ' ' : '';
+	tooltipDiv.querySelectorAll("textarea:not([aria-label]), input:not([aria-label]):not([type='checkbox'])").forEach((el) => {
+		el.setAttribute('aria-label', titleText + 'input');
+	});
+}
+
 function _createButton(id, label, setting, tooltipText, timeWarp = '') {
 	const settingInfo = autoTrimpSettings[id];
 	const initialStyle = timeWarp ? 'display: inline-block; vertical-align: top; margin-left: 0.5vw; margin-top: 0.25vw; margin-bottom: 1vw; width: 16.382vw; border-color: #5D5D5D;' : '';
@@ -6103,6 +6182,9 @@ function _createButton(id, label, setting, tooltipText, timeWarp = '') {
 	settings.appendChild(settingsButton);
 
 	initial.appendChild(container);
+
+	_atAccessify(text, { describe: () => [`Auto${label}`, 'customText', autoTrimpSettings[id].description(true)] });
+	_atAccessify(settings, { label: `Configure Auto${label}` });
 
 	return initial;
 }
@@ -6165,6 +6247,7 @@ function _createChangelogButton() {
 
 	const settingbarRow = document.getElementById('settingsTable').firstElementChild.firstElementChild;
 	settingbarRow.insertBefore(changelog, settingbarRow.childNodes[settingbarRow.childNodes.length - 4]);
+	_atAccessify(changelog);
 }
 
 function _createAutoTrimpsButton() {
@@ -6182,6 +6265,7 @@ function _createAutoTrimpsButton() {
 
 	const settingbarRow = document.getElementById('settingsTable').firstElementChild.firstElementChild;
 	settingbarRow.insertBefore(atSettings, settingbarRow.childNodes[10]);
+	_atAccessify(atSettings, { label: 'AutoTrimps settings' });
 }
 
 function _createAutoMapsButton() {
@@ -6203,6 +6287,7 @@ function _createAutoMapsButton() {
 	);
 
 	fightButtonCol.appendChild(autoMapsContainer);
+	_atAccessify(autoMapsContainer, { describe: () => ['Toggle Auto Maps', 'customText', autoTrimpSettings.autoMaps.description(true)] });
 }
 
 function _createAutoMapsButtonTW() {
@@ -6222,6 +6307,7 @@ function _createAutoMapsButtonTW() {
 	document.getElementById('offlineExtraBtnsContainer').children[2].insertAdjacentHTML('afterend', '<br>');
 	const offlineExtraBtnsContainer = document.getElementById('offlineFightBtn').parentNode;
 	offlineExtraBtnsContainer.replaceChild(autoMapsContainer, document.getElementById('offlineFightBtn').parentNode.children[3]);
+	_atAccessify(autoMapsContainer, { describe: () => ['Toggle Auto Maps', 'customText', autoTrimpSettings.autoMaps.description(true)] });
 }
 
 function _createStatusTextbox() {
@@ -6465,6 +6551,7 @@ function _createAutoTrimpsButtonTW() {
 		},
 		['AutoTrimps Settings']
 	);
+	_atAccessify(atSettings, { label: 'AutoTrimps settings' });
 	$('#settingBtnTW').append(atSettings);
 }
 
