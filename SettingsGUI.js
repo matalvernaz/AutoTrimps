@@ -6211,7 +6211,10 @@ function _createButton(id, label, setting, tooltipText, timeWarp = '') {
 
 	initial.appendChild(container);
 
-	_atAccessify(text, { describe: () => [`Auto${label}`, 'customText', autoTrimpSettings[id].description(true)] });
+	_atAccessify(text, {
+		pressed: settingInfo.type === 'boolean' ? !!setting : undefined,
+		describe: () => [`Auto${label}`, 'customText', autoTrimpSettings[id].description(true)]
+	});
 	_atAccessify(settings, { label: `Configure Auto${label}` });
 
 	return initial;
@@ -6315,7 +6318,10 @@ function _createAutoMapsButton() {
 	);
 
 	fightButtonCol.appendChild(autoMapsContainer);
-	_atAccessify(autoMapsContainer, { describe: () => ['Toggle Auto Maps', 'customText', autoTrimpSettings.autoMaps.description(true)] });
+	_atAccessify(autoMapsContainer, {
+		label: autoTrimpSettings.autoMaps.name()[getPageSetting('autoMaps')],
+		describe: () => ['Toggle Auto Maps', 'customText', autoTrimpSettings.autoMaps.description(true)]
+	});
 }
 
 function _createAutoMapsButtonTW() {
@@ -6335,7 +6341,10 @@ function _createAutoMapsButtonTW() {
 	document.getElementById('offlineExtraBtnsContainer').children[2].insertAdjacentHTML('afterend', '<br>');
 	const offlineExtraBtnsContainer = document.getElementById('offlineFightBtn').parentNode;
 	offlineExtraBtnsContainer.replaceChild(autoMapsContainer, document.getElementById('offlineFightBtn').parentNode.children[3]);
-	_atAccessify(autoMapsContainer, { describe: () => ['Toggle Auto Maps', 'customText', autoTrimpSettings.autoMaps.description(true)] });
+	_atAccessify(autoMapsContainer, {
+		label: autoTrimpSettings.autoMaps.name()[getPageSetting('autoMaps')],
+		describe: () => ['Toggle Auto Maps', 'customText', autoTrimpSettings.autoMaps.description(true)]
+	});
 }
 
 function _createStatusTextbox() {
@@ -6585,23 +6594,38 @@ function _createAutoTrimpsButtonTW() {
 
 function _setAutoMapsClasses() {
 	let autoMaps = getPageSetting('autoMaps');
+	// The bar buttons keep static "Auto Maps" text; the state name lives in the aria-label
+	// (the tab's own element shows the state name as its text via settingChanged).
+	const stateName = autoTrimpSettings.autoMaps.name()[autoMaps];
 	document.getElementById('autoMaps').setAttribute('class', 'toggleConfigBtn noselect settingsBtn settingBtn' + autoMaps);
 	if (autoMaps === 2) autoMaps = 1;
-	document.getElementById('autoMapBtn').setAttribute('class', 'noselect settingsBtn settingBtn' + autoMaps);
-	document.getElementById('autoMapBtnTW').setAttribute('class', 'btn btn-lg offlineExtraBtn settingsBtn settingBtn' + autoMaps);
+	const mapBtn = document.getElementById('autoMapBtn');
+	mapBtn.setAttribute('class', 'noselect settingsBtn settingBtn' + autoMaps);
+	mapBtn.setAttribute('aria-label', stateName);
+	const mapBtnTW = document.getElementById('autoMapBtnTW');
+	mapBtnTW.setAttribute('class', 'btn btn-lg offlineExtraBtn settingsBtn settingBtn' + autoMaps);
+	mapBtnTW.setAttribute('aria-label', stateName);
 }
 
 function _setBuildingClasses() {
 	const autoStructure = getPageSetting('buildingsType');
 	document.getElementById('buildingsType').setAttribute('class', 'toggleConfigBtn noselect settingsBtn settingBtn' + autoStructure);
-	document.getElementById('autoStructureLabel').parentNode.setAttribute('class', 'toggleConfigBtn pointer noselect autoUpgradeBtn settingBtn' + autoStructure);
-	document.getElementById('autoStructureLabelTW').parentNode.setAttribute('class', 'toggleConfigBtn pointer noselect settingsBtn settingBtn' + autoStructure);
+	document.getElementById('buildingsType').setAttribute('aria-pressed', String(!!autoStructure));
+	['autoStructureLabel', 'autoStructureLabelTW'].forEach(function (elemId) {
+		const label = document.getElementById(elemId);
+		if (!label) return;
+		label.parentNode.setAttribute('class', 'toggleConfigBtn pointer noselect ' + (elemId === 'autoStructureLabel' ? 'autoUpgradeBtn' : 'settingsBtn') + ' settingBtn' + autoStructure);
+		label.setAttribute('aria-pressed', String(!!autoStructure));
+	});
 }
 
 function _setAutoEquipClasses() {
 	const autoEquip = getPageSetting('equipOn');
 	document.getElementById('equipOn').setAttribute('class', 'toggleConfigBtn noselect settingsBtn settingBtn' + autoEquip);
-	document.getElementById('autoEquipLabel').parentNode.setAttribute('class', 'toggleConfigBtn pointer noselect autoUpgradeBtn settingBtn' + autoEquip);
+	document.getElementById('equipOn').setAttribute('aria-pressed', String(!!autoEquip));
+	const label = document.getElementById('autoEquipLabel');
+	label.parentNode.setAttribute('class', 'toggleConfigBtn pointer noselect autoUpgradeBtn settingBtn' + autoEquip);
+	label.setAttribute('aria-pressed', String(!!autoEquip));
 }
 
 function _setAutoJobsClasses() {
