@@ -911,9 +911,8 @@ function messageDisplay(elem) {
 	return [elem, tooltipText, costText, ondisplay];
 }
 
-function _messageConfigHoverAT(what, event) {
-	const messageConfigMap = {
-		hide: { title: 'Hide', text: 'Here you can select the messages that the script will print into the message log.<br>Mouse over the name of a filter for more info.' },
+const _atMessageConfigMap = {
+	hide: { title: 'Hide', text: 'Here you can select the messages that the script will print into the message log.<br>Mouse over the name of a filter for more info.' },
 		general: { title: 'General', text: 'Notification Messages, Auto He/Hr.' },
 		buildings: { title: 'Buildings', text: 'Log buildings purchased.' },
 		jobs: { title: 'Jobs', text: 'Log workers hired.' },
@@ -936,9 +935,10 @@ function _messageConfigHoverAT(what, event) {
 		exotic: { title: 'Exotic', text: 'Log your current world exotics when starting a new zone.' },
 		challenge_Abandon: { title: 'Challenge Abandon', text: 'Log when challenges are abandoned through the scripts settings.' },
 		portal: { title: 'Portal', text: 'Log challenges started by Auto Portal.' }
-	};
+};
 
-	const config = messageConfigMap[what];
+function _messageConfigHoverAT(what, event) {
+	const config = _atMessageConfigMap[what];
 	if (!config) return;
 
 	if (what === 'hide') document.getElementById('messageConfig').innerHTML = `${config.text}`;
@@ -956,6 +956,93 @@ function _messageSave() {
 
 	setPageSetting('spamMessages', setting);
 	cancelTooltip();
+}
+
+/* AutoTrimps section inside the game's "Message Config" popup. The game's
+   log-row cog is rewired (see _createMessagesButton) to call this right
+   after the game renders its own tooltip, so the section only ever exists
+   while AutoTrimps is loaded. Toggles apply instantly — the game's
+   Confirm/Cancel buttons only affect the game's own checkboxes. */
+const _AT_MESSAGE_CONFIG_KEYS = ['gather', 'buildings', 'jobs', 'equipment', 'upgrades', 'maps', 'map_Details', 'map_Destacking', 'map_Skip', 'golden_Upgrades', 'other', 'stance', 'magmite', 'nature', 'zone', 'run_Stats', 'exotic', 'challenge_Abandon', 'portal'];
+
+function _atExtendMessageConfig() {
+	const tipText = document.getElementById('tipText');
+	const tipTitle = document.getElementById('tipTitle');
+	if (!tipText || !tipTitle || tipTitle.innerHTML !== 'Message Config') return;
+	if (document.getElementById('atMessageConfigSection')) return;
+
+	const msgs = getPageSetting('spamMessages');
+	const shown = msgs.show || typeof msgs.show === 'undefined';
+
+	const section = document.createElement('DIV');
+	section.id = 'atMessageConfigSection';
+
+	const heading = document.createElement('DIV');
+	heading.className = 'messageConfigTitle';
+	heading.textContent = 'AutoTrimps';
+	section.appendChild(heading);
+
+	const master = document.createElement('DIV');
+	master.id = 'atMessageMasterToggle';
+	master.className = `btnItem btnItem${shown ? 'Equipped' : 'NotEquipped'}`;
+	master.innerHTML = '<span>Show AutoTrimps messages in log</span>';
+	master.addEventListener('click', _atMessageMasterToggle);
+	_atAccessify(master, {
+		label: 'Show AutoTrimps messages in log',
+		pressed: shown,
+		describe: () => [
+			'Show AutoTrimps messages in log', 'customText',
+			'Master switch for every AutoTrimps message. Same control as the AT Messages filter button under the log.'
+		]
+	});
+	section.appendChild(master);
+
+	for (const key of _AT_MESSAGE_CONFIG_KEYS) {
+		if (typeof msgs[key] === 'undefined') msgs[key] = false;
+		const info = _atMessageConfigMap[key];
+		const realName = info ? info.title : (key.charAt(0).toUpperCase() + key.substr(1)).replace(/_/g, ' ');
+		const enabled = msgs[key];
+
+		const tile = document.createElement('DIV');
+		tile.className = `btnItem btnItem${enabled ? 'Equipped' : 'NotEquipped'}`;
+		tile.dataset.atMessageKey = key;
+		tile.innerHTML = `<span>${realName}</span>`;
+		tile.addEventListener('click', function () {
+			_atMessageConfigToggle(this);
+		});
+		if (info) {
+			tile.addEventListener('mouseover', function () {
+				const msgDiv = document.getElementById('messageConfigMessage');
+				if (msgDiv) msgDiv.innerHTML = `<b>${info.title}</b><br>${info.text}`;
+			});
+		}
+		_atAccessify(tile, {
+			label: realName,
+			pressed: enabled,
+			describe: () => [realName, 'customText', info ? info.text : realName]
+		});
+		section.appendChild(tile);
+	}
+
+	tipText.appendChild(section);
+}
+
+function _atMessageConfigToggle(element) {
+	_hideAutomationToggleElem(element);
+	const setting = getPageSetting('spamMessages');
+	setting[element.dataset.atMessageKey] = element.classList.contains('btnItemEquipped');
+	setPageSetting('spamMessages', setting);
+}
+
+function _atMessageMasterToggle() {
+	filterMessage_AT();
+	const shown = getPageSetting('spamMessages').show;
+	const master = document.getElementById('atMessageMasterToggle');
+	if (master) {
+		master.classList.toggle('btnItemEquipped', shown);
+		master.classList.toggle('btnItemNotEquipped', !shown);
+		master.setAttribute('aria-pressed', String(shown));
+	}
 }
 
 /* daily portal mods */

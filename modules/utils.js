@@ -189,11 +189,19 @@ function filterMessage_AT() {
 	const messageElements = document.getElementsByClassName(`AutoTrimpsMessage`);
 	const filterElement = document.getElementById(`AutoTrimpsFilter`);
 	const messageSetting = getPageSetting('spamMessages');
-	const isDisplayed = !getPageSetting('spamMessages').show;
+	// An unset 'show' means shown (message_AT treats undefined as
+	// visible), so toggle from the *effective* state — otherwise the
+	// first-ever press writes show=true and changes nothing.
+	const wasShown = messageSetting.show || typeof messageSetting.show === 'undefined';
+	const isDisplayed = !wasShown;
 	const displayStyle = isDisplayed ? 'block' : 'none';
 	messageSetting.show = isDisplayed;
 	saveSettings();
 	filterElement.className = getTabClass(isDisplayed);
+	filterElement.setAttribute('aria-pressed', String(isDisplayed));
+	if (typeof _atAnnounce === 'function') {
+		_atAnnounce(`AutoTrimps messages ${isDisplayed ? 'shown' : 'hidden'}`);
+	}
 
 	Array.from(messageElements).forEach((messageElement) => {
 		messageElement.style.display = displayStyle;

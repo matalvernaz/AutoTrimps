@@ -6466,13 +6466,16 @@ function _createMessagesButton() {
 		onmouseover: 'tooltip("Toggle AutoTrimps Messages", "customText", event, `This will control the visibility of AutoTrimps messages in the log window based on your settings.<br>Note: Only map-related messages will be displayed during Time Warp.`)',
 		onmouseout: 'tooltip("hide")'
 	});
-	const btnDisplay = `btn-${getPageSetting('spamMessages').show ? 'success' : 'danger'}`;
+	const msgSetting = getPageSetting('spamMessages');
+	const msgsShown = msgSetting.show || typeof msgSetting.show === 'undefined';
+	const btnDisplay = `btn-${msgsShown ? 'success' : 'danger'}`;
 	const atBtnText = _createElement(
 		'button',
 		{
 			id: 'AutoTrimpsFilter',
 			type: 'button',
 			onClick: 'filterMessage_AT()',
+			'aria-pressed': String(msgsShown),
 			class: `btn ${btnDisplay} logFlt`
 		},
 		['AT Messages']
@@ -6481,10 +6484,26 @@ function _createMessagesButton() {
 	atBtnContainer.appendChild(atBtnText);
 	document.getElementById('logBtnGroup').appendChild(atBtnContainer);
 
+	// The game already ships a "Configure Displayed Messages" cog with
+	// id 'logConfigBtn'; injecting a second cog under the same id left
+	// two anonymous cog buttons in the log row. Instead, chain the AT
+	// message section onto the game's popup — it renders synchronously,
+	// so extending right after the game's onclick works.
+	const gameCog = document.getElementById('logConfigBtn');
+	if (gameCog) {
+		gameCog.setAttribute(
+			'onclick',
+			`${gameCog.getAttribute('onclick')}; _atExtendMessageConfig();`
+		);
+		return;
+	}
+
+	// Fallback for builds without the game cog: keep AT's standalone one.
 	const atBtnSettings = _createElement('button', {
-		id: 'logConfigBtn',
+		id: 'atLogConfigBtn',
 		type: 'button',
 		onclick: 'importExportTooltip("messageConfig")',
+		'aria-label': 'Configure AutoTrimps messages',
 		class: 'btn btn-default logFlt'
 	});
 
